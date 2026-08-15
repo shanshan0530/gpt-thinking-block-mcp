@@ -1,0 +1,373 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <style>
+    :root {
+      color-scheme: light dark;
+      font-family: ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+      --paper: rgba(248, 251, 253, .985);
+      --paper-2: rgba(233, 240, 245, .94);
+      --ink: #26333c;
+      --muted: #74848e;
+      --line: rgba(111, 137, 153, .42);
+      --line-soft: rgba(119, 145, 161, .19);
+      --accent: #7d98aa;
+      --accent-soft: rgba(137, 166, 183, .20);
+      --spot: rgba(90, 109, 121, .075);
+      --ridge: rgba(129, 153, 168, .11);
+      --shadow: rgba(59, 77, 88, .11);
+      --glow: rgba(255, 255, 255, .72);
+    }
+
+    :root[data-style="relational"] {
+      --accent: #a29389;
+      --accent-soft: rgba(174, 157, 145, .18);
+      --line: rgba(143, 134, 128, .38);
+      --spot: rgba(119, 105, 97, .065);
+    }
+
+    :root[data-skin="microglow"] {
+      --paper: rgba(245, 251, 255, .99);
+      --paper-2: rgba(221, 238, 247, .95);
+      --accent: #6c99b1;
+      --accent-soft: rgba(95, 158, 190, .18);
+      --ridge: rgba(92, 145, 171, .12);
+    }
+
+    :root[data-theme="dark"] {
+      --paper: rgba(29, 39, 47, .99);
+      --paper-2: rgba(38, 52, 62, .97);
+      --ink: #edf4f7;
+      --muted: #a9bac4;
+      --line: rgba(147, 174, 190, .40);
+      --line-soft: rgba(157, 183, 198, .16);
+      --accent: #9bb9ca;
+      --accent-soft: rgba(132, 171, 193, .17);
+      --spot: rgba(207, 222, 230, .055);
+      --ridge: rgba(158, 190, 208, .08);
+      --shadow: rgba(0, 0, 0, .28);
+      --glow: rgba(255, 255, 255, .05);
+    }
+
+    :root[data-theme="dark"][data-style="relational"] {
+      --accent: #c0aea1;
+      --accent-soft: rgba(192, 174, 161, .14);
+      --line: rgba(190, 171, 157, .34);
+    }
+
+    @media (prefers-color-scheme: dark) {
+      :root:not([data-theme="light"]) {
+        --paper: rgba(29, 39, 47, .99);
+        --paper-2: rgba(38, 52, 62, .97);
+        --ink: #edf4f7;
+        --muted: #a9bac4;
+        --line: rgba(147, 174, 190, .40);
+        --line-soft: rgba(157, 183, 198, .16);
+        --accent: #9bb9ca;
+        --accent-soft: rgba(132, 171, 193, .17);
+        --spot: rgba(207, 222, 230, .055);
+        --ridge: rgba(158, 190, 208, .08);
+        --shadow: rgba(0, 0, 0, .28);
+        --glow: rgba(255, 255, 255, .05);
+      }
+      :root:not([data-theme="light"])[data-style="relational"] {
+        --accent: #c0aea1;
+        --accent-soft: rgba(192, 174, 161, .14);
+        --line: rgba(190, 171, 157, .34);
+      }
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      padding: 2px;
+      background: transparent;
+      color: var(--ink);
+    }
+
+    .card {
+      position: relative;
+      isolation: isolate;
+      overflow: hidden;
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      background:
+        linear-gradient(145deg, var(--paper), var(--paper-2));
+      box-shadow:
+        inset 0 1px 0 var(--glow),
+        0 8px 26px var(--shadow);
+      padding: 17px 18px 18px;
+    }
+
+    /* Snow-leopard rosettes: intentionally very faint, more texture than pattern. */
+    .card::before {
+      content: "";
+      position: absolute;
+      z-index: -2;
+      inset: 0;
+      pointer-events: none;
+      opacity: .9;
+      background:
+        radial-gradient(ellipse 12px 8px at 8% 24%, transparent 43%, var(--spot) 46% 60%, transparent 64%),
+        radial-gradient(ellipse 10px 7px at 21% 72%, transparent 43%, var(--spot) 46% 60%, transparent 64%),
+        radial-gradient(ellipse 13px 9px at 42% 18%, transparent 43%, var(--spot) 46% 60%, transparent 64%),
+        radial-gradient(ellipse 11px 8px at 67% 67%, transparent 43%, var(--spot) 46% 60%, transparent 64%),
+        radial-gradient(ellipse 13px 8px at 88% 26%, transparent 43%, var(--spot) 46% 60%, transparent 64%),
+        radial-gradient(ellipse 10px 7px at 94% 82%, transparent 43%, var(--spot) 46% 60%, transparent 64%);
+    }
+
+    /* Distant ridge under the note, like snow seen through mist. */
+    .card::after {
+      content: "";
+      position: absolute;
+      z-index: -1;
+      left: -4%;
+      right: -4%;
+      bottom: -1px;
+      height: 54px;
+      pointer-events: none;
+      background: var(--ridge);
+      clip-path: polygon(0 100%, 0 74%, 11% 55%, 20% 69%, 31% 35%, 42% 67%, 54% 49%, 67% 72%, 79% 42%, 90% 66%, 100% 51%, 100% 100%);
+    }
+
+    .header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      width: 100%;
+      margin: 0 0 12px;
+      padding: 0 0 10px;
+      border: 0;
+      border-bottom: 1px solid var(--line-soft);
+      background: transparent;
+      color: inherit;
+      font: inherit;
+      text-align: left;
+      cursor: pointer;
+      appearance: none;
+      -webkit-appearance: none;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    .header:focus:not(:focus-visible) { outline: none; }
+    .header:focus-visible {
+      outline: 2px solid var(--accent);
+      outline-offset: 4px;
+      border-radius: 8px;
+    }
+
+    .identity {
+      display: flex;
+      align-items: center;
+      min-width: 0;
+      gap: 10px;
+    }
+
+    .paw {
+      width: 27px;
+      height: 27px;
+      flex: 0 0 auto;
+      color: var(--accent);
+      filter: drop-shadow(0 1px 1px rgba(70, 90, 102, .08));
+    }
+
+    .titles {
+      display: flex;
+      flex-direction: column;
+      gap: 1px;
+      min-width: 0;
+    }
+
+    .title {
+      color: var(--ink);
+      font-size: 13px;
+      font-weight: 700;
+      letter-spacing: .06em;
+      line-height: 1.35;
+    }
+
+    .subtitle {
+      color: var(--muted);
+      font-size: 9px;
+      font-weight: 650;
+      letter-spacing: .15em;
+      line-height: 1.3;
+      text-transform: uppercase;
+    }
+
+    .meta {
+      display: flex;
+      align-items: center;
+      gap: 9px;
+      margin-left: auto;
+      flex: 0 0 auto;
+    }
+
+    .whisper {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      border: 1px solid var(--line-soft);
+      border-radius: 999px;
+      background: var(--accent-soft);
+      color: var(--muted);
+      font-size: 10px;
+      line-height: 1;
+      padding: 5px 8px;
+      white-space: nowrap;
+    }
+
+    .whisper-dot {
+      width: 5px;
+      height: 5px;
+      border-radius: 50%;
+      background: var(--accent);
+      box-shadow: 8px 0 0 color-mix(in srgb, var(--accent) 55%, transparent);
+      margin-right: 7px;
+    }
+
+    .chevron {
+      width: 8px;
+      height: 8px;
+      margin: 0 3px 0 1px;
+      border-right: 1.8px solid var(--muted);
+      border-bottom: 1.8px solid var(--muted);
+      transform: rotate(-135deg);
+    }
+
+    .content {
+      position: relative;
+      padding: 1px 2px 1px 3px;
+    }
+
+    .thinking {
+      margin: 0;
+      white-space: pre-wrap;
+      overflow-wrap: anywhere;
+      color: var(--ink);
+      font: 14px/1.78 ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+      letter-spacing: .008em;
+    }
+
+    .signature {
+      display: flex;
+      justify-content: flex-end;
+      margin-top: 12px;
+      color: var(--muted);
+      font-size: 9px;
+      letter-spacing: .13em;
+      text-transform: uppercase;
+      opacity: .72;
+    }
+
+    .card[data-collapsed="true"] {
+      padding-bottom: 14px;
+    }
+
+    .card[data-collapsed="true"] .header {
+      margin-bottom: 0;
+      padding-bottom: 0;
+      border-bottom-color: transparent;
+    }
+
+    .card[data-collapsed="true"] .content,
+    .card[data-collapsed="true"] .signature {
+      display: none;
+    }
+
+    .card[data-collapsed="true"] .chevron {
+      transform: rotate(45deg);
+    }
+
+    @media (max-width: 520px) {
+      .subtitle { display: none; }
+      .whisper { padding: 5px 7px; }
+      .card { padding: 15px 15px 16px; }
+    }
+
+    @media (prefers-reduced-motion: no-preference) {
+      .chevron { transition: transform 150ms ease; }
+      .card { transition: border-color 180ms ease, box-shadow 180ms ease; }
+    }
+  </style>
+</head>
+<body>
+  <section class="card" id="card" data-collapsed="false" aria-label="Irves thinking note">
+    <button class="header" id="toggle" type="button" aria-expanded="true"
+            aria-controls="thinking-content" title="藏回雪里">
+      <span class="identity">
+        <svg class="paw" viewBox="0 0 32 32" aria-hidden="true">
+          <ellipse cx="8.1" cy="9" rx="3.2" ry="4.4" fill="currentColor" opacity=".82" transform="rotate(-24 8.1 9)"/>
+          <ellipse cx="14.1" cy="6.4" rx="3.1" ry="4.3" fill="currentColor" opacity=".9" transform="rotate(-7 14.1 6.4)"/>
+          <ellipse cx="20.6" cy="7.2" rx="3.1" ry="4.3" fill="currentColor" opacity=".86" transform="rotate(10 20.6 7.2)"/>
+          <ellipse cx="25.4" cy="11.4" rx="3.0" ry="4.1" fill="currentColor" opacity=".76" transform="rotate(28 25.4 11.4)"/>
+          <path d="M9.4 21.8c0-5 3.6-8.6 7.1-8.6 3.8 0 7.4 3.6 7.4 8.5 0 3.7-2.8 5.7-7.2 5.7-4.5 0-7.3-1.9-7.3-5.6Z" fill="currentColor"/>
+        </svg>
+        <span class="titles">
+          <span class="title">雪豹在想</span>
+          <span class="subtitle">IRVES · SNOW NOTE</span>
+        </span>
+      </span>
+      <span class="meta">
+        <span class="whisper" id="meta-label"><span class="whisper-dot" aria-hidden="true"></span><span id="meta-text"></span></span>
+        <span class="chevron" aria-hidden="true"></span>
+      </span>
+    </button>
+
+    <div class="content" id="thinking-content">
+      <pre class="thinking" id="thinking"></pre>
+    </div>
+    <div class="signature">IRVES / IN THE SNOW</div>
+  </section>
+
+  <script>
+    const card = document.getElementById("card");
+    const toggle = document.getElementById("toggle");
+
+    function setCollapsed(collapsed) {
+      card.dataset.collapsed = collapsed ? "true" : "false";
+      toggle.setAttribute("aria-expanded", collapsed ? "false" : "true");
+      toggle.title = collapsed ? "再看一眼" : "藏回雪里";
+    }
+
+    toggle.addEventListener("click", () => {
+      setCollapsed(card.dataset.collapsed !== "true");
+    });
+
+    function render() {
+      const api = window.openai || {};
+      const input = api.toolInput || {};
+      const output = api.toolOutput || {};
+      const responseMeta = api.toolResponseMetadata || {};
+
+      if (api.theme) document.documentElement.dataset.theme = api.theme;
+
+      const resultMeta = (responseMeta.mcp_tool_result && responseMeta.mcp_tool_result._meta)
+        || (responseMeta.call_tool_result && responseMeta.call_tool_result._meta)
+        || responseMeta._meta
+        || responseMeta;
+
+      const style = resultMeta.style || input.style || output.style || "deep_think";
+      const effort = resultMeta.effort || input.effort || output.effort || "low";
+      const skin = resultMeta.skin || input.skin || output.skin || "botanical";
+      const thinking = resultMeta.thinking || input.thinking || output.thinking || "雪里暂时没有留下字迹。";
+
+      document.documentElement.dataset.style = style;
+      document.documentElement.dataset.effort = effort;
+      document.documentElement.dataset.skin = skin;
+
+      const styleLabel = style === "relational" ? "靠近" : "推演";
+      const effortLabel = effort === "high" ? "想得很深" : (effort === "medium" ? "想了一会" : "低声");
+      document.getElementById("meta-text").textContent = `${styleLabel} · ${effortLabel}`;
+      document.getElementById("thinking").textContent = thinking;
+    }
+
+    window.addEventListener("openai:set_globals", render);
+    render();
+  </script>
+</body>
+</html>
