@@ -1,7 +1,7 @@
 FROM python:3.12-slim
 
 WORKDIR /app
-COPY server.py server_custom.py ./
+COPY server.py server_custom.py widget.html ./
 
 ENV PYTHONUNBUFFERED=1
 ENV THINKING_PROMPT_LANGUAGE=zh-CN
