@@ -5,6 +5,8 @@ COPY server.py server_custom.py ./
 
 ENV PYTHONUNBUFFERED=1
 ENV THINKING_PROMPT_LANGUAGE=zh-CN
+ENV MCP_BIND=0.0.0.0
+ENV CAPTURE_ENABLED=0
 EXPOSE 8787
 
 HEALTHCHECK --interval=30s --timeout=3s --start-period=3s --retries=3 \
