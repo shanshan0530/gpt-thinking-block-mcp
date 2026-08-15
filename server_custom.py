@@ -4,6 +4,7 @@
 Keeps upstream server.py untouched and only strengthens tool-call behavior.
 """
 
+import os
 import sys
 import server
 
@@ -22,7 +23,10 @@ server.TOOL["description"] = (
 )
 
 if __name__ == "__main__":
-    port = int(sys.argv[1]) if len(sys.argv) > 1 else 8787
+    # Zeabur injects PORT for Git services. Prefer it so the app always listens
+    # on the same port that Zeabur routes the public domain to.
+    fallback_port = int(sys.argv[1]) if len(sys.argv) > 1 else 8787
+    port = int(os.environ.get("PORT") or fallback_port)
     print(f"GPT Thinking Block MCP (custom) listening on http://{server.BIND_HOST}:{port}/mcp")
     print(f"Prompt language: {server.PROMPT_LANGUAGE}")
     print(f"Capture: {'enabled -> ' + str(server.LOG) if server.CAPTURE_ENABLED else 'disabled'}")
