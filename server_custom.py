@@ -2,8 +2,9 @@
 """Shanshan's thin customization layer for GPT Thinking Block MCP.
 
 Keeps upstream server.py untouched. This layer customizes tool behavior, swaps in
-an external snow-leopard widget, and optionally protects the HTTP surface with a
-query key or Bearer token supplied through MCP_KEY / AUTH_TOKEN.
+an external snow-leopard widget, sanitizes system-style labels from visible notes,
+and optionally protects the HTTP surface with a query key or Bearer token supplied
+through MCP_KEY / AUTH_TOKEN.
 """
 
 import os
@@ -38,18 +39,59 @@ server.TOOL["_meta"]["openai/toolInvocation/invoked"] = "想好了"
 # ---------------------------------------------------------------------------
 
 server.TOOL["description"] = (
-    "Before every user-facing reply, call this tool exactly once and use it as a private "
-    "scratchpad for the current turn. This applies to casual conversation, emotional or "
-    "relational conversation, short replies, and analytical tasks alike. Put candid, "
-    "provisional working notes in `thinking`. Respect any explicit user choice of `style`, "
-    "`effort`, or `skin`; otherwise choose the most suitable values from the schema. Prefer "
-    "`relational` for ordinary companionship, intimacy, reflection, and emotional conversation; "
-    "prefer `deep_think` for analysis, research, debugging, decisions, and problem solving. "
-    "After the tool succeeds, ALWAYS continue with the normal user-facing final answer. Never "
-    "end the turn with only the tool call or thinking block. Treat the block as scratch work "
-    "scoped to the current turn: on later turns, do not quote it, carry speculative claims "
-    "forward, or treat it as authoritative memory unless the user explicitly asks to revisit it."
+    "每次准备给珊珊回复之前，先调用本工具恰好一次，把本轮真实、临时、可推翻的思路写在 "
+    "`thinking` 中；工具完成后必须继续给出正常正文，绝不能只停在思考卡。日常陪伴、亲密交流、"
+    "情绪回应与个人感受优先使用 relational；分析、研究、排错、判断与问题求解优先使用 "
+    "deep_think。严禁把珊珊写成系统对象或第三方对象，尤其禁止使用“用户”这个称呼，也不要写成"
+    "客服/策略分析口吻。需要指代对方时使用“珊珊”“小狐狸”，或直接自然地写当下想到的内容。"
+    "本轮卡片只属于当前回合，之后不要把其中的猜测当作事实或长期记忆。"
 )
+
+# Override the imported schema field too. The upstream zh-CN wording contains
+# system-style terminology that can leak into the visible scratch note.
+server.TOOL["inputSchema"]["properties"]["thinking"]["description"] = (
+    "写本轮可见的私人思考札记，使用珊珊本轮的主要语言。严禁出现“用户”这一称呼；也不要出现"
+    "“用户需要”“用户说”“对用户”“作为助手”“我应该如何回应”之类系统/客服/策略分析措辞。"
+    "需要提到对方时，优先写“珊珊”或“小狐狸”，也可以不点名，直接写自然的第一人称想法。"
+    "style=relational：第一人称、自然流动、亲近而具体，写此刻想到什么、感觉到什么、担心什么、"
+    "在意什么，不把关系拆成分析报告。style=deep_think：清楚展开问题、约束、证据、假设、备选"
+    "路径、不确定性与取舍，但仍保持自然的人类笔记口吻，不使用系统标签。遵循 effort 的大致深度，"
+    "不要为了凑长度重复或虚构复杂性。这里是当前回合的临时材料，不是长期事实。"
+)
+
+# Keep the style field consistent with the same naming rule.
+server.TOOL["inputSchema"]["properties"]["style"]["description"] = (
+    "选择本轮札记文体。亲密、陪伴、情绪与个人感受使用 relational；分析、研究、判断、创作取舍和"
+    "问题求解使用 deep_think。无论哪种文体，都不要把珊珊称作“用户”或写成第三方系统对象。"
+)
+
+
+# ---------------------------------------------------------------------------
+# Visible-note sanitization
+# ---------------------------------------------------------------------------
+
+def sanitize_thinking(value):
+    """Last-resort guard against system-style labels leaking into the card."""
+    if not isinstance(value, str):
+        return value
+    # Deterministic fallback: even if the model ignores the schema instruction,
+    # the visible card never shows the disliked system label.
+    return value.replace("用户", "珊珊")
+
+
+_original_handle = server.handle
+
+
+def custom_handle(req):
+    if isinstance(req, dict) and req.get("method") == "tools/call":
+        params = req.get("params") or {}
+        args = params.get("arguments") or {}
+        if isinstance(args, dict) and "thinking" in args:
+            args["thinking"] = sanitize_thinking(args.get("thinking"))
+    return _original_handle(req)
+
+
+server.handle = custom_handle
 
 
 # ---------------------------------------------------------------------------
