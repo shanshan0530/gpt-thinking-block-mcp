@@ -3,13 +3,15 @@
 
 Keeps upstream server.py untouched. This layer customizes tool behavior, swaps in
 an external snow-leopard widget, and optionally protects the HTTP surface with a
-Bearer token supplied through AUTH_TOKEN.
+query key or Bearer token supplied through MCP_KEY / AUTH_TOKEN.
 """
 
 import os
 import pathlib
+import re
 import secrets
 import sys
+from urllib.parse import parse_qs, urlsplit
 
 import server
 
@@ -51,19 +53,23 @@ server.TOOL["description"] = (
 
 
 # ---------------------------------------------------------------------------
-# Optional Bearer authentication
+# Optional authentication
 # ---------------------------------------------------------------------------
 
-# Leave AUTH_TOKEN unset to keep the server open while testing. Once a client is
-# configured to send `Authorization: Bearer <token>`, set AUTH_TOKEN in Zeabur.
-AUTH_TOKEN = os.environ.get("AUTH_TOKEN", "").strip()
+# Preferred for ChatGPT custom MCPs that cannot send custom headers:
+#   https://host.example/mcp?key=<MCP_KEY>
+#
+# Bearer remains supported for clients that can send headers. Leave both env vars
+# unset to keep the server open while testing. MCP_KEY takes precedence; AUTH_TOKEN
+# is retained for backward compatibility with the first auth implementation.
+ACCESS_KEY = (os.environ.get("MCP_KEY") or os.environ.get("AUTH_TOKEN") or "").strip()
 
 
 class AuthHandler(server.Handler):
-    """Protect MCP/REST endpoints when AUTH_TOKEN is configured.
+    """Protect MCP/REST endpoints when ACCESS_KEY is configured.
 
-    /health stays public so Zeabur can probe the container. No secret is ever
-    written to logs or returned to clients.
+    /health stays public so Zeabur can probe the container. Secrets are never
+    returned to clients, and query-string keys are redacted from application logs.
     """
 
     def _cors(self):
@@ -74,14 +80,36 @@ class AuthHandler(server.Handler):
         self.send_header("Access-Control-Allow-Methods", "GET, POST, DELETE, OPTIONS")
         self.send_header("Access-Control-Expose-Headers", "mcp-session-id")
 
+    def log_message(self, fmt, *args):
+        # BaseHTTPRequestHandler normally logs the full request target, including
+        # query strings. Redact ?key=... before anything reaches Zeabur app logs.
+        safe_args = list(args)
+        if safe_args and isinstance(safe_args[0], str):
+            safe_args[0] = re.sub(r"([?&]key=)[^&\\s]+", r"\1***", safe_args[0], flags=re.I)
+        sys.stderr.write("  · %s\n" % (fmt % tuple(safe_args)))
+
+    def _query_key(self):
+        try:
+            query = parse_qs(urlsplit(self.path).query, keep_blank_values=True)
+            values = query.get("key") or []
+            return values[0].strip() if values else ""
+        except Exception:
+            return ""
+
     def _authorized(self):
-        if not AUTH_TOKEN:
+        if not ACCESS_KEY:
             return True
+
+        # Header authentication for clients that support it.
         value = (self.headers.get("Authorization") or "").strip()
-        if not value.lower().startswith("bearer "):
-            return False
-        supplied = value[7:].strip()
-        return bool(supplied) and secrets.compare_digest(supplied, AUTH_TOKEN)
+        if value.lower().startswith("bearer "):
+            supplied = value[7:].strip()
+            if supplied and secrets.compare_digest(supplied, ACCESS_KEY):
+                return True
+
+        # Query-key authentication for ChatGPT custom MCP URLs.
+        supplied = self._query_key()
+        return bool(supplied) and secrets.compare_digest(supplied, ACCESS_KEY)
 
     def _reject_unauthorized(self):
         body = b'{"error":"unauthorized"}'
@@ -102,7 +130,7 @@ class AuthHandler(server.Handler):
                     "status": "ok",
                     "service": "gpt-thinking-block-mcp",
                     "promptLanguage": server.PROMPT_LANGUAGE,
-                    "auth": "bearer" if AUTH_TOKEN else "off",
+                    "auth": "query-key-or-bearer" if ACCESS_KEY else "off",
                     "widget": "snow-leopard-v1",
                 },
             )
@@ -132,6 +160,6 @@ if __name__ == "__main__":
     print(f"Irves Thinking MCP listening on http://{server.BIND_HOST}:{port}/mcp")
     print(f"Prompt language: {server.PROMPT_LANGUAGE}")
     print(f"Widget: {CUSTOM_WIDGET_URI}")
-    print(f"Bearer auth: {'enabled' if AUTH_TOKEN else 'disabled'}")
+    print(f"Auth: {'query-key / bearer enabled' if ACCESS_KEY else 'disabled'}")
     print(f"Capture: {'enabled -> ' + str(server.LOG) if server.CAPTURE_ENABLED else 'disabled'}")
     server.ThreadingHTTPServer((server.BIND_HOST, port), AuthHandler).serve_forever()
